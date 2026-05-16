@@ -122,7 +122,22 @@ In the solution: `else if (y > 10)` should be changed to `else if (y >= 10)`, co
 The C code and assembly code do not correspond to each other, if I change
 the assembly code, it should be like:
 ```asm
-7       leaq    5(rbp, %rcx), %rbx
+short dw_loop(short x)
+x initially in %rdi
+
+dw_loop:
+    movq  %rdi, %rbx         ; x = argument (x lives in %rbx)
+    movq  %rdi, %rcx         ; copy x, prepare to compute y
+    idivq $9, %rcx           ; y = x/9 (y lives in %rcx)
+    leaq  (,%rdi,4), %rdx    ; n = 4*x (n lives in %rdx)
+.L2:
+    leaq  5(%rbx,%rcx), %rbx ; x = x + y + 5
+                             ; (merges x+=y and (*p)+=5,
+                             ;  since p=&x, *p is just x)
+    subq  $2, %rdx           ; n -= 2 (original book had $1, which is a bug)
+    testq %rdx, %rdx         ; test whether n > 0
+    jg    .L2                ; if (n > 0) jump back to loop
+    rep; ret                 ; return x (currently in %rbx)
 ```
 And the answer from page 370 should also be changed.
 
